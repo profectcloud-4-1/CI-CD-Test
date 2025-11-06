@@ -2,22 +2,12 @@ pipeline {
   agent { docker { image 'gradle:8.10.2-jdk17' reuseNode true } }
 
   stages {
-    stage('Init sample project') {
-      steps {
-        sh '''
-          rm -rf demo && mkdir demo && cd demo
-          gradle init --type java-application --dsl groovy --test-framework junit --project-name demo --package demo -q
-        '''
-      }
+    stage('Checkout') {
+      steps { checkout scm }
     }
     stage('Build & Test') {
-      steps {
-        sh 'cd demo && ./gradlew clean build --no-daemon --info'
-      }
+      steps { sh './gradlew clean build --no-daemon --info' }
+      // 윈도우 노드라도 Docker 컨테이너 안에서는 Linux셸이므로 sh 사용
     }
-  }
-  post {
-    success { echo '✅ Jenkins 로컬 파이프라인 성공' }
-    failure { echo '❌ 실패 - 콘솔 로그 확인' }
   }
 }
