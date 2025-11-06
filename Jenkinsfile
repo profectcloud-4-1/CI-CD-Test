@@ -1,23 +1,20 @@
 pipeline {
-  agent { docker { image 'gradle:8.10.2-jdk17' reuseNode true } }
-
-  stages {
-    stage('Init sample project') {
-      steps {
-        sh '''
-          rm -rf demo && mkdir demo && cd demo
-          gradle init --type java-application --dsl groovy --test-framework junit --project-name demo --package demo -q
-        '''
-      }
-    }
-    stage('Build & Test') {
-      steps {
-        sh 'cd demo && ./gradlew clean build --no-daemon --info'
-      }
+  agent {
+    docker {
+      image 'gradle:8.10.2-jdk17'
+      // 필요하면 추가 옵션
+      // args '-v $HOME/.gradle:/home/gradle/.gradle'
+      reuseNode true
     }
   }
-  post {
-    success { echo '✅ Jenkins 로컬 파이프라인 성공' }
-    failure { echo '❌ 실패 - 콘솔 로그 확인' }
+
+  stages {
+    stage('Gradle Build') {
+      steps {
+        sh 'gradle --version || true'   // 컨테이너 내부 gradle 확인 (optional)
+        sh 'chmod +x gradlew || true'
+        sh './gradlew clean test build --no-daemon'
+      }
+    }
   }
 }
