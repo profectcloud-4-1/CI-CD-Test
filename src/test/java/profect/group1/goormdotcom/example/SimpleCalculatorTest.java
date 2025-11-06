@@ -21,7 +21,7 @@ class SimpleCalculatorTest {
         int result = a + b;
 
         // then
-        assertThat(result).isEqualTo(10); // <- 여기 기대값 바꾸면 CI 깨짐
+        assertThat(result).isEqualTo(9); // <- 여기 기대값 바꾸면 CI 깨짐
     }
 
     @Test
