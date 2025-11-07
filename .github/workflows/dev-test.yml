@@ -34,7 +34,7 @@ jobs:
       - name: Build with Gradle Wrapper
         run: ./gradlew build
 
-    notify-slack-on-build-failure:
+  notify-slack-on-build-failure:
       name: Notify Slack on build failure
       needs: build
       runs-on: ubuntu-latest
