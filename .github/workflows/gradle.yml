@@ -36,8 +36,9 @@ jobs:
       id-token: write     # OIDC로 AWS 권한 받을 때 필요
 
     env:
-      AWS_REGION: ap-northeast-2            # 쓰는 리전으로 변경
+      AWS_REGION: ${{ vars.AWS_REGION }}            # 쓰는 리전으로 변경
       ECR_REPOSITORY: ${{ secrets.AWS_ECR_REPOSITORY }}        # ECR 리포지토리 이름 (미리 만들어둬야 함)
+      IMAGE_STEP: ${{ vars.IMAGE_STEP }}
 
     steps:
       - name: Checkout
@@ -62,9 +63,8 @@ jobs:
         with:
           images: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
           tags: |
-            type=raw,value=latest
-            type=ref,event=branch
-            type=sha
+            # {commit sha}-{step} 규칙
+            type=sha,format=short,suffix=-${{ env.IMAGE_STEP }}
 
       # 4) Build & Push to ECR
       - name: Build and push
@@ -81,28 +81,30 @@ jobs:
       - build
       - docker-image
     runs-on: ubuntu-latest
-    # build job이 실패했을 때만 실행
+    # application build 또는 image build가 실패했을 때 실행
     if: always() && (needs.build.result == 'failure' || needs.docker-image.result == 'failure')
     steps:
       - name: Send Slack notification
         run: |
-          payload=$(jq -n --arg repo "${GITHUB_REPOSITORY}" \
-                        --arg workflow "${GITHUB_WORKFLOW}" \
-                        --arg job "build" \
-                        --arg url "https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
-                        --arg actor "${GITHUB_ACTOR}" \
-                        '{
-                          "text": ":x: *CI Build Failed*",
-                          "blocks": [
-                            {
-                              "type": "section",
-                              "text": {
-                                "type": "mrkdwn",
-                                "text": ":x: *CI Build Failed* in `\($repo)`\n*Workflow*: \($workflow)\n*Job*: \($job)\n*Triggered by*: \($actor)\n<\($url)|View run in GitHub>"
-                              }
-                            }
-                          ]
-                        }')
+          job_name="${{ github.job }}"
+          payload=$(jq -n \
+            --arg repo "${GITHUB_REPOSITORY}" \
+            --arg workflow "${GITHUB_WORKFLOW}" \
+            --arg job "$job_name" \
+            --arg url "https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            --arg actor "${GITHUB_ACTOR}" \
+            '{
+              "text": ":x: *CI Build Failed*",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":x: *CI Build Failed* in `\($repo)`\n*Workflow*: \($workflow)\n*Job*: \($job)\n*Triggered by*: \($actor)\n<\($url)|View run in GitHub>"
+                  }
+                }
+              ]
+            }')
           curl -X POST -H 'Content-type: application/json' \
             --data "$payload" \
             "${{ secrets.SLACK_WEBHOOK_URL }}"
