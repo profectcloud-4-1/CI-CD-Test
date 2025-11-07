@@ -82,7 +82,7 @@ jobs:
       - docker-image
     runs-on: ubuntu-latest
     # build job이 실패했을 때만 실행
-    if: failure()
+    if: always() && (needs.build.result == 'failure' || needs.docker-image.result == 'failure')
     steps:
       - name: Send Slack notification
         run: |
