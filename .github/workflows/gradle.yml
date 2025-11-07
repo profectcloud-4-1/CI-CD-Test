@@ -37,7 +37,7 @@ jobs:
 
     env:
       AWS_REGION: ap-northeast-2            # 쓰는 리전으로 변경
-      ECR_REPOSITORY: my-app-service        # ECR 리포지토리 이름 (미리 만들어둬야 함)
+      ECR_REPOSITORY: ${{ secrets.AWS_ECR_REPOSITORY }}        # ECR 리포지토리 이름 (미리 만들어둬야 함)
 
     steps:
       - name: Checkout
@@ -77,10 +77,12 @@ jobs:
 
   notify-slack-on-build-failure:
     name: Notify Slack on build failure
-    needs: build
+    needs:
+      - build
+      - docker-image
     runs-on: ubuntu-latest
     # build job이 실패했을 때만 실행
-    if: failure()
+    if: always() && (needs.build.result == 'failure' || needs.docker-image.result == 'failure')
     steps:
       - name: Send Slack notification
         run: |
